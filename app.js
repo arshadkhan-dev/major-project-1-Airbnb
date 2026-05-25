@@ -2,7 +2,7 @@
 const express = require("express")
 const app = express();
 const mongoose = require("mongoose");
-const mongoUrl = "mongodb://127.0.0.1:27017/wanderlust";
+const mongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/wanderlust";
 const Listing = require("./models/listing");
 const path = require("path");
 const mehtodOverride = require("method-override");
@@ -27,7 +27,9 @@ async function main() {
     await mongoose.connect(mongoUrl);
 }
 
-app.listen(8080,() => {
+const port = process.env.port || 8080;
+
+app.listen(port,() => {
     console.log("app is listening");
 });
 
