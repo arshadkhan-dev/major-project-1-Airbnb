@@ -34,8 +34,7 @@ app.listen(port,() => {
 });
 
 app.get("/home",(req,res) => {
-    console.log("working");
-    res.send("working");
+    res.redirect("/listings");
 });
 
 
