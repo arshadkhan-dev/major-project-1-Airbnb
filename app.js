@@ -7,6 +7,20 @@ const Listing = require("./models/listing");
 const path = require("path");
 const mehtodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
+const WrapAsync = require("./utils/WrapAsync.js");
+const ExpressError = require("./utils/ExpressError.js");
+const {ListingSchema} = require("./schema.js");
+
+const validateListing = (req,res,next)=>{
+    let {error} = ListingSchema.validate(req.body);
+    if(error){
+    let errMsg = error.details.map((el) => el.message).join(","); 
+    throw new ExpressError(400,errMsg);
+   }
+   else{
+    next();
+   }
+}
 
 app.use(mehtodOverride("_method"));
 
@@ -29,10 +43,6 @@ async function main() {
 
 const port = process.env.port || 8080;
 
-app.listen(port,() => {
-    console.log("app is listening");
-});
-
 app.get("/home",(req,res) => {
     res.redirect("/listings");
 });
@@ -48,34 +58,46 @@ app.get("/listings/new",(req,res) => {
     res.render("new.ejs");
 });
 
-app.post("/listings", async (req,res) => {
+app.post("/listings",validateListing, WrapAsync(async (req,res,next) => {
     const newListing = new Listing(req.body.listing);
     await newListing.save();
     res.redirect("/listings");
-    
-});
+}));
 
-app.get("/listings/:id/edit", async (req,res) => {
+app.get("/listings/:id/edit", WrapAsync(async (req,res) => {
     let { id } = req.params;
     let listing = await Listing.findById(id);
     res.render("edit.ejs",{listing}); 
-});
+}));
 
-app.put("/listings/:id", async (req,res) => {
+app.put("/listings/:id",validateListing, WrapAsync(async (req,res) => {
         let { id } = req.params;
         await Listing.findByIdAndUpdate(id,{...req.body.listing});
         res.redirect(`/listing/${id}`);
-});
+}));
 
-app.delete("/listing/:id/delete", async (req,res) => {
+app.delete("/listing/:id/delete", WrapAsync(async (req,res) => {
     let { id } = req.params;
     await Listing.findByIdAndDelete(id);
     res.redirect("/listings");
-});
+}));
 
 
-app.get("/listing/:id", async (req,res) => {
+app.get("/listing/:id", WrapAsync(async (req,res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id);
     res.render("show.ejs",{listing});
+}));
+
+app.use((req,res,next) => {
+    next(new ExpressError(404,"Page Not Found"));
+});
+
+app.use((err,req,res,next) => {
+    let {statusCode,message} = err;
+    res.status(statusCode).render("error.ejs",{message});
+});
+
+app.listen(port,() => {
+    console.log("app is listening");
 });
